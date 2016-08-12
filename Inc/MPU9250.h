@@ -275,17 +275,15 @@ class MPU9250 {
         return data[0]; 
     }
 
-    char readByteAK(uint8_t subAddress)
+    uint8_t readByteAK(uint8_t subAddress)
     {
-        char response;
+        uint8_t response;
         writeByte(I2C_SLV0_ADDR, AK8963_ADDRESS | 0x80); //Set the I2C slave addres of AK8963 and set for read.
         writeByte(I2C_SLV0_REG, subAddress); //I2C slave 0 register address from where to begin data transfer
         writeByte(I2C_SLV0_CTRL, 0x81);    //Read one byte
-        //response = readByte(EXT_SENS_DATA_00);    //Read I2C 
-        //writeByte(I2C_SLV0_CTRL, 0x81); //Read 1 byte from the magnetometer
-        wait(0.1);
+        wait(0.01);
         response = readByte(EXT_SENS_DATA_00);    //Read I2C 
-        return response;
+        return response;   
     }    
     
     void readBytes(uint8_t subAddress, uint8_t count, uint8_t * dest)
@@ -304,10 +302,10 @@ class MPU9250 {
         mpu_spi_deselect();
     } 
 
-    void readBytesAK(uint8_t subAddress, uint8_t count, uint8_t * dest)
+    /*void readBytesAK(uint8_t subAddress, uint8_t count, uint8_t * dest)
     {
 
-    }
+    }*/
 
 void getMres() {
   switch (Mscale)
@@ -392,7 +390,7 @@ void readGyroData(int16_t * destination)
   destination[2] = (int16_t)(((int16_t)rawData[4] << 8) | rawData[5]) ; 
 }
 
-void readMagData(int16_t * destination)
+/*void readMagData(int16_t * destination)
 {
   uint8_t rawData[7];  // x/y/z gyro register data, ST2 register stored here, must read ST2 at end of data acquisition
   if(readByteAK(AK8963_ST1) & 0x01) { // wait for magnetometer data ready bit to be set
@@ -404,6 +402,25 @@ void readMagData(int16_t * destination)
     destination[2] = (int16_t)(((int16_t)rawData[5] << 8) | rawData[4]) ; 
    }
   }
+}*/
+
+void readMagData(int16_t * destination)
+{
+    writeByte(I2C_SLV0_ADDR, AK8963_ADDRESS | READ_FLAG); //Set the I2C slave addres of AK8963 and set for read.
+    writeByte(I2C_SLV0_REG, AK8963_XOUT_L); //I2C slave 0 register address from where to begin data transfer
+    writeByte(I2C_SLV0_CTRL, 0x87); //Read 6 bytes from the magnetometer
+ 
+    wait(0.01);
+    uint8_t response[7];
+    readBytes(EXT_SENS_DATA_00, 7, response);
+    //must start your read from AK8963A register 0x03 and read seven bytes so that upon read of ST2 register 0x09 the AK8963A will unlatch the data registers for the next measurement.
+    for(int i = 0; i < 3; i++) 
+    {
+        int16_t bit_data = ((int16_t)response[i * 2] << 8) | response[i * 2 + 1];
+        destination[i] = bit_data;
+        //float data = (float) bit_data;
+        //Magnetometer[i] = data / Magnetometer_divider;
+    }
 }
 
 int16_t readTempData()
@@ -420,7 +437,7 @@ void resetMPU9250()
     wait(0.1);
 }
   
-  void initAK8963(float * destination)
+/*void initAK8963(float * destination)
 {
   // First extract the factory calibration for each magnetometer axis
   uint8_t rawData[3];  // x/y/z gyro calibration data stored here
@@ -439,7 +456,7 @@ void resetMPU9250()
   // and enable continuous mode data acquisition Mmode (bits [3:0]), 0010 for 8 Hz and 0110 for 100 Hz sample rates
   writeByteAK(AK8963_CNTL, Mscale << 4 | Mmode); // Set magnetometer data resolution and sample ODR
   wait(0.01);
-}
+}*/
 
 #define delay(t) wait((t) * 0.001)
 
