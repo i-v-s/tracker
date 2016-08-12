@@ -341,9 +341,10 @@ int main(void)
         
         /*mpu9250.initMPU9250(); 
         uprintf("MPU9250 initialized for active data mode....\n\r"); // Initialize device for active mode read of acclerometer, gyroscope, and temperature
-
+        */
         mpu9250.initAK8963(magCalibration);
-        uprintf("AK8963 initialized for active data mode....\n\r"); // Initialize device for active mode read of magnetometer
+        
+        /*uprintf("AK8963 initialized for active data mode....\n\r"); // Initialize device for active mode read of magnetometer
         uprintf("Accelerometer full-scale range = %f  g\n\r", 2.0f*(float)(1<<Ascale));
         uprintf("Gyroscope full-scale range = %f  deg/s\n\r", 250.0f*(float)(1<<Gscale));*/
         /*if(Mscale == 0) uprintf("Magnetometer resolution = 14  bits\n\r");
@@ -390,7 +391,7 @@ int main(void)
             gz = (float)gyroCount[2]*gRes - gyroBias[2];   
           
             mpu9250.readMagData(magCount);  // Read the x/y/z adc values   
-            uprintf("mag = (%d, %d, %d)", magCount[0], magCount[1], magCount[2]);
+            //uprintf("mag = (%d, %d, %d)", magCount[0], magCount[1], magCount[2]);
             // Calculate the magnetometer values in milliGauss
             // Include factory calibration per data sheet and user environmental corrections
             mx = (float)magCount[0]*mRes*magCalibration[0] - magbias[0];  // get actual magnetometer value, this depends on scale being set
@@ -411,21 +412,24 @@ int main(void)
         delt_t = HAL_GetTick() - count;
         if (delt_t > 500) 
         { // update LCD once per half-second independent of read rate
+            //uprintf("acc = (%f, %f, %f)g", ax, ay, az);
             /*uprintf("ax = %f", 1000*ax); 
             uprintf(" ay = %f", 1000*ay); 
             uprintf(" az = %f  mg\n\r", 1000*az); */
 
+            //uprintf("gyr = (%f, %f, %f)d/s\n", gx, gy, gz);
             /*uprintf("gx = %f", gx); 
             uprintf(" gy = %f", gy); 
-            uprintf(" gz = %f  deg/s\n\r", gz); 
+            uprintf(" gz = %f  deg/s\n\r", gz); */
             
-            uprintf("gx = %f", mx); 
+            uprintf("mag = (%f, %f, %f)mG\n", mx, my, mz);
+            /*uprintf("gx = %f", mx); 
             uprintf(" gy = %f", my); 
             uprintf(" gz = %f  mG\n\r", mz); */
             
             tempCount = mpu9250.readTempData();  // Read the adc values
             temperature = ((float) tempCount) / 333.87f + 21.0f; // Temperature in degrees Centigrade
-            uprintf(" temperature = %f  C\n\r", temperature); 
+            //uprintf(" temperature = %f  C\n\r", temperature); 
             
             /*uprintf("q0 = %f\n\r", q[0]);
             uprintf("q1 = %f\n\r", q[1]);
@@ -449,7 +453,7 @@ int main(void)
             yaw   -= 13.8f; // Declination at Danville, California is 13 degrees 48 minutes and 47 seconds on 2014-04-04
             roll  *= 180.0f / PI;
 
-            uprintf("Yaw, Pitch, Roll: %f %f %f\n\r", yaw, pitch, roll);
+            uprintf("Yaw, Pitch, Roll: %.1f %.1f %.1f\n\r", yaw, pitch, roll);
             uprintf("average rate = %f\n\r", (float) sumCount/sum);
             
             //myled= !myled;

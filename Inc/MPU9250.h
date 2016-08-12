@@ -423,6 +423,16 @@ void readMagData(int16_t * destination)
     }
 }
 
+void readBytesASAX(uint8_t * destination)
+{
+    writeByte(I2C_SLV0_ADDR, AK8963_ADDRESS | READ_FLAG); //Set the I2C slave addres of AK8963 and set for read.
+    writeByte(I2C_SLV0_REG, AK8963_ASAX); //I2C slave 0 register address from where to begin data transfer
+    writeByte(I2C_SLV0_CTRL, 0x83); //Read 6 bytes from the magnetometer
+ 
+    wait(0.01);
+    readBytes(EXT_SENS_DATA_00, 3, destination);
+}
+
 int16_t readTempData()
 {
   uint8_t rawData[2];  // x/y/z gyro register data stored here
@@ -437,7 +447,7 @@ void resetMPU9250()
     wait(0.1);
 }
   
-/*void initAK8963(float * destination)
+void initAK8963(float * destination)
 {
   // First extract the factory calibration for each magnetometer axis
   uint8_t rawData[3];  // x/y/z gyro calibration data stored here
@@ -445,7 +455,8 @@ void resetMPU9250()
   wait(0.01);
   writeByteAK(AK8963_CNTL, 0x0F); // Enter Fuse ROM access mode
   wait(0.01);
-  readBytesAK(AK8963_ASAX, 3, &rawData[0]);  // Read the x-, y-, and z-axis calibration values
+  //readBytesAK(AK8963_ASAX, 3, &rawData[0]);  // Read the x-, y-, and z-axis calibration values
+  readBytesASAX(rawData);
   destination[0] =  (float)(rawData[0] - 128)/256.0f + 1.0f;   // Return x-axis sensitivity adjustment values, etc.
   destination[1] =  (float)(rawData[1] - 128)/256.0f + 1.0f;  
   destination[2] =  (float)(rawData[2] - 128)/256.0f + 1.0f; 
@@ -456,7 +467,7 @@ void resetMPU9250()
   // and enable continuous mode data acquisition Mmode (bits [3:0]), 0010 for 8 Hz and 0110 for 100 Hz sample rates
   writeByteAK(AK8963_CNTL, Mscale << 4 | Mmode); // Set magnetometer data resolution and sample ODR
   wait(0.01);
-}*/
+}
 
 #define delay(t) wait((t) * 0.001)
 
