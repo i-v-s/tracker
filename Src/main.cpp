@@ -422,7 +422,7 @@ int main(void)
             uprintf(" gy = %f", gy); 
             uprintf(" gz = %f  deg/s\n\r", gz); */
             
-            uprintf("mag = (%f, %f, %f)mG\n", mx, my, mz);
+            //uprintf("mag = (%f, %f, %f)mG\n", mx, my, mz);
             /*uprintf("gx = %f", mx); 
             uprintf(" gy = %f", my); 
             uprintf(" gz = %f  mG\n\r", mz); */
@@ -431,6 +431,7 @@ int main(void)
             temperature = ((float) tempCount) / 333.87f + 21.0f; // Temperature in degrees Centigrade
             //uprintf(" temperature = %f  C\n\r", temperature); 
             
+            uprintf("+q(%f,%f,%f,%f)\n", q[0], q[1], q[2], q[3]);
             /*uprintf("q0 = %f\n\r", q[0]);
             uprintf("q1 = %f\n\r", q[1]);
             uprintf("q2 = %f\n\r", q[2]);
@@ -445,16 +446,16 @@ int main(void)
             // Tait-Bryan angles as well as Euler angles are non-commutative; that is, the get the correct orientation the rotations must be
             // applied in the correct order which for this configuration is yaw, pitch, and then roll.
             // For more see http://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles which has additional links.
-            yaw   = atan2(2.0f * (q[1] * q[2] + q[0] * q[3]), q[0] * q[0] + q[1] * q[1] - q[2] * q[2] - q[3] * q[3]);   
+            /*yaw   = atan2(2.0f * (q[1] * q[2] + q[0] * q[3]), q[0] * q[0] + q[1] * q[1] - q[2] * q[2] - q[3] * q[3]);   
             pitch = -asin(2.0f * (q[1] * q[3] - q[0] * q[2]));
             roll  = atan2(2.0f * (q[0] * q[1] + q[2] * q[3]), q[0] * q[0] - q[1] * q[1] - q[2] * q[2] + q[3] * q[3]);
             pitch *= 180.0f / PI;
             yaw   *= 180.0f / PI; 
             yaw   -= 13.8f; // Declination at Danville, California is 13 degrees 48 minutes and 47 seconds on 2014-04-04
-            roll  *= 180.0f / PI;
+            roll  *= 180.0f / PI;*/
 
-            uprintf("Yaw, Pitch, Roll: %.1f %.1f %.1f\n\r", yaw, pitch, roll);
-            uprintf("average rate = %f\n\r", (float) sumCount/sum);
+            //uprintf("Yaw, Pitch, Roll: %.1f %.1f %.1f\n\r", yaw, pitch, roll);
+            //uprintf("average rate = %f\n\r", (float) sumCount/sum);
             
             //myled= !myled;
             count = HAL_GetTick(); 
