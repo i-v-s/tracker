@@ -202,9 +202,14 @@ int16_t magCount[3];    // Stores the 16-bit signed magnetometer sensor output
 float magCalibration[3] = {0, 0, 0}, magbias[3] = {0, 0, 0};  // Factory mag calibration and mag bias
 float gyroBias[3] = {0, 0, 0}, accelBias[3] = {0, 0, 0}; // Bias corrections for gyro and accelerometer
 float ax, ay, az, gx, gy, gz, mx, my, mz; // variables to hold latest sensor data values 
+float oax, oay, oaz;
+float vx = 0.0f, vy = 0.0f, vz = 0.0f;
+float px = 0.0f, py = 0.0f, pz = 0.0f;
 int16_t tempCount;   // Stores the real internal chip temperature in degrees Celsius
 float temperature;
 float SelfTest[6];
+int stop = 0;
+uint32_t oldTime = 0;
 
 int delt_t = 0; // used to control display output rate
 int count = 0;  // used to control display output rate

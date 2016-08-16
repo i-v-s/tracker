@@ -258,6 +258,66 @@ uint8_t AK8963_whoami()
     return response;
 }
 
+void cross(float *s, const float *u, const float *v)
+{
+    s[0] = u[1] * v[2] - u[2] * v[1];
+    s[1] = u[2] * v[0] - u[0] * v[2];
+    s[2] = u[0] * v[1] - u[1] * v[0];
+}
+
+void mulqv(float *q, float *v)
+{
+    float t[3], qt[3];
+    //t = 2 * cross(q.xyz, v)
+    cross(t, q + 1, v);
+    t[0] *= 2.0f; t[1] *= 2.0f; t[2] *= 2.0f;
+    cross(qt, q + 1, t);
+    v[0] += q[0] * t[0] + qt[0];
+    v[1] += q[0] * t[1] + qt[1];
+    v[2] += q[0] * t[2] + qt[2];
+    //v' = v + q.w * t + cross(q.xyz, t)  
+}
+
+float dvbias[3] = {0, 0, 1.0};
+
+
+void integrate(bool stop)
+{
+    uint32_t time = HAL_GetTick();
+    float dt = (time - oldTime) * 0.001f;
+    oldTime = time;
+    
+    float dv[3] = {(ax + oax) * 0.5f, (ay + oay) * 0.5f, (az + oaz) * 0.5f};
+    mulqv(q, dv);
+    //Vector3 dv = (state.q.toRotationMatrix() * aNew + prev.first->state.q.toRotationMatrix() * aOld) / 2; // ускорение dv = (new.q * ea + old.q * eaold) / 2
+    
+    if(stop)
+    {
+        dvbias[0] += (dv[0] - dvbias[0]) * 0.05;
+        dvbias[1] += (dv[1] - dvbias[1]) * 0.05;
+        dvbias[2] += (dv[2] - dvbias[2]) * 0.05;
+        vx = 0.0f;
+        vy = 0.0f;
+        vz = 0.0f;
+        return;
+    }
+    dv[0] -= dvbias[0];
+    dv[1] -= dvbias[1];
+    dv[2] -= dvbias[2];
+    //uprintf("*D%f,%f,%f*\n", dv[0], dv[1], dv[2]);
+    
+    float nvx = vx + dv[0] * dt;
+    float nvy = vy + dv[1] * dt;
+    float nvz = vz + dv[2] * dt;
+    //uprintf("*V%f,%f,%f*\n", nvx, nvy, nvz);
+    px += (vx + nvx) * (dt * 0.5f);
+    py += (vy + nvy) * (dt * 0.5f);
+    pz += (vz + nvz) * (dt * 0.5f);
+    vx = nvx * 0.95;
+    vy = nvy * 0.95;
+    vz = nvz * 0.95;
+}
+
 int main(void)
 {
 
@@ -369,27 +429,38 @@ int main(void)
     magbias[0] = 0.0f;//+470.;  // User environmental x-axis correction in milliGauss, should be automatically calculated
     magbias[1] = 0.0f;//+120.;  // User environmental x-axis correction in milliGauss
     magbias[2] = 0.0f;//+125.;  // User environmental x-axis correction in milliGauss
-
+    
+    //int asum[3] = {0, 0, 0};
+    //int ctr = 0;
     while(1) 
     {
         // If intPin goes high, all data registers have new data
         if(mpu9250.readByte(INT_STATUS) & 0x01) 
         {  // On interrupt, check if data ready interrupt
-          
+            if(stop < 1000) 
+                stop++;
+            
             mpu9250.readAccelData(accelCount);  // Read the x/y/z adc values   
-            //uprintf("acc = (%d, %d, %d)", accelCount[0], accelCount[1], accelCount[2]);
-            // Now we'll calculate the accleration value into actual g's
-            ax = (float)accelCount[0]*aRes - accelBias[0];  // get actual g value, this depends on scale being set
-            ay = (float)accelCount[1]*aRes - accelBias[1];   
-            az = (float)accelCount[2]*aRes - accelBias[2];  
-           
+            //uprintf("*A%d,%d,%d*\n", accelCount[0], accelCount[1], accelCount[2]);
+            ax += (((float) (accelCount[0] - 180)) / 16400.0f - ax) * 0.1;
+            ay += (((float) (accelCount[1] - 95)) / 16395.0f - ay) * 0.1;
+            az += (((float) (accelCount[2] + 605)) / 16535.0f - az) * 0.1;
+            //uprintf("*A%f,%f,%f*\n", ax, ay, az);
+#define GTOL 5.0f
+#define ATOL 0.3f
+            if(fabs(oax - ax) > ATOL || fabs(oay - ay) > ATOL || fabs(oaz - az) > ATOL)
+                stop = 0;
+            
             mpu9250.readGyroData(gyroCount);  // Read the x/y/z adc values
             //uprintf("gyr = (%d, %d, %d)", gyroCount[0], gyroCount[1], gyroCount[2]);
             // Calculate the gyro value into actual degrees per second
             gx = (float)gyroCount[0]*gRes - gyroBias[0];  // get actual gyro value, this depends on scale being set
             gy = (float)gyroCount[1]*gRes - gyroBias[1];  
-            gz = (float)gyroCount[2]*gRes - gyroBias[2];   
-          
+            gz = (float)gyroCount[2]*gRes - gyroBias[2];
+            if(stop && fabs(gx) > GTOL || fabs(gy) > GTOL || fabs(gz) > GTOL)
+                stop = 0;
+            //uprintf("*G%f,%f,%f*\n", gx, gy, gz);
+            
             mpu9250.readMagData(magCount);  // Read the x/y/z adc values   
             // Calculate the magnetometer values in milliGauss
             // Include factory calibration per data sheet and user environmental corrections
@@ -401,6 +472,11 @@ int main(void)
                 my = (float)magCount[1] * mRes * magCalibration[1] - magbias[1];  
                 mz = (float)magCount[2] * mRes * magCalibration[2] - magbias[2];
             }
+            integrate(stop > 50);
+            
+            oax = ax;
+            oay = ay;
+            oaz = az;
         }
    
         uint32_t Now = HAL_GetTick();
@@ -435,11 +511,9 @@ int main(void)
             //temperature = ((float) tempCount) / 333.87f + 21.0f; // Temperature in degrees Centigrade
             //uprintf(" temperature = %f  C\n\r", temperature); 
             
-            uprintf("+q(%f,%f,%f,%f)\n", q[0], q[1], q[2], q[3]);
-            /*uprintf("q0 = %f\n\r", q[0]);
-            uprintf("q1 = %f\n\r", q[1]);
-            uprintf("q2 = %f\n\r", q[2]);
-            uprintf("q3 = %f\n\r", q[3]);      */
+            uprintf("*Q%f,%f,%f,%f*\n", q[0], q[1], q[2], q[3]);
+            uprintf("*P%f,%f,%f*\n", px, py, pz);
+            
     
             // Define output variables from updated quaternion---these are Tait-Bryan angles, commonly used in aircraft orientation.
             // In this coordinate system, the positive z-axis is down toward Earth. 
