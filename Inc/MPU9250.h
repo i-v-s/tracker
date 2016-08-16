@@ -416,7 +416,7 @@ void readMagData(int16_t * destination)
     //must start your read from AK8963A register 0x03 and read seven bytes so that upon read of ST2 register 0x09 the AK8963A will unlatch the data registers for the next measurement.
     for(int i = 0; i < 3; i++) 
     {
-        int16_t bit_data = ((int16_t)response[i * 2] << 8) | response[i * 2 + 1];
+        int16_t bit_data = ((int16_t)response[i * 2 + 1] << 8) | response[i * 2];
         destination[i] = bit_data;
         //float data = (float) bit_data;
         //Magnetometer[i] = data / Magnetometer_divider;
@@ -465,7 +465,7 @@ void initAK8963(float * destination)
   // Configure the magnetometer for continuous read and highest resolution
   // set Mscale bit 4 to 1 (0) to enable 16 (14) bit resolution in CNTL register,
   // and enable continuous mode data acquisition Mmode (bits [3:0]), 0010 for 8 Hz and 0110 for 100 Hz sample rates
-  writeByteAK(AK8963_CNTL, Mscale << 4 | Mmode); // Set magnetometer data resolution and sample ODR
+  writeByteAK(AK8963_CNTL, (Mscale << 4) | Mmode); // Set magnetometer data resolution and sample ODR
   wait(0.01);
 }
 

@@ -366,9 +366,9 @@ int main(void)
     /*uprintf("Accelerometer sensitivity is %f LSB/g \n\r", 1.0f/aRes);
     uprintf("Gyroscope sensitivity is %f LSB/deg/s \n\r", 1.0f/gRes);
     uprintf("Magnetometer sensitivity is %f LSB/G \n\r", 1.0f/mRes);*/
-    magbias[0] = +470.;  // User environmental x-axis correction in milliGauss, should be automatically calculated
-    magbias[1] = +120.;  // User environmental x-axis correction in milliGauss
-    magbias[2] = +125.;  // User environmental x-axis correction in milliGauss
+    magbias[0] = 0.0f;//+470.;  // User environmental x-axis correction in milliGauss, should be automatically calculated
+    magbias[1] = 0.0f;//+120.;  // User environmental x-axis correction in milliGauss
+    magbias[2] = 0.0f;//+125.;  // User environmental x-axis correction in milliGauss
 
     while(1) 
     {
@@ -391,12 +391,16 @@ int main(void)
             gz = (float)gyroCount[2]*gRes - gyroBias[2];   
           
             mpu9250.readMagData(magCount);  // Read the x/y/z adc values   
-            //uprintf("mag = (%d, %d, %d)", magCount[0], magCount[1], magCount[2]);
             // Calculate the magnetometer values in milliGauss
             // Include factory calibration per data sheet and user environmental corrections
-            mx = (float)magCount[0]*mRes*magCalibration[0] - magbias[0];  // get actual magnetometer value, this depends on scale being set
-            my = (float)magCount[1]*mRes*magCalibration[1] - magbias[1];  
-            mz = (float)magCount[2]*mRes*magCalibration[2] - magbias[2];   
+            if(magCount[0] != -1 || magCount[1] != -1 || magCount[2] != -1)
+            {
+                //uprintf("+m(%d, %d, %d)\n", magCount[0], magCount[1], magCount[2]);
+                //uprintf("*M%d,%d,%d*\n", magCount[0], magCount[1], magCount[2]);
+                mx = (float)magCount[0] * mRes * magCalibration[0] - magbias[0];  // get actual magnetometer value, this depends on scale being set
+                my = (float)magCount[1] * mRes * magCalibration[1] - magbias[1];  
+                mz = (float)magCount[2] * mRes * magCalibration[2] - magbias[2];
+            }
         }
    
         uint32_t Now = HAL_GetTick();
@@ -410,7 +414,7 @@ int main(void)
 
         // Serial print and/or display at 0.5 s rate independent of data rates
         delt_t = HAL_GetTick() - count;
-        if (delt_t > 500) 
+        if (delt_t > 100) 
         { // update LCD once per half-second independent of read rate
             //uprintf("acc = (%f, %f, %f)g", ax, ay, az);
             /*uprintf("ax = %f", 1000*ax); 
@@ -427,8 +431,8 @@ int main(void)
             uprintf(" gy = %f", my); 
             uprintf(" gz = %f  mG\n\r", mz); */
             
-            tempCount = mpu9250.readTempData();  // Read the adc values
-            temperature = ((float) tempCount) / 333.87f + 21.0f; // Temperature in degrees Centigrade
+            //tempCount = mpu9250.readTempData();  // Read the adc values
+            //temperature = ((float) tempCount) / 333.87f + 21.0f; // Temperature in degrees Centigrade
             //uprintf(" temperature = %f  C\n\r", temperature); 
             
             uprintf("+q(%f,%f,%f,%f)\n", q[0], q[1], q[2], q[3]);
