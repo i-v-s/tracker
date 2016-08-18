@@ -409,13 +409,20 @@ void readGyroData(int16_t * destination)
   }
 }*/
 
-void readMagData(int16_t * destination)
+void initReadMagData()
 {
     writeByte(I2C_SLV0_ADDR, AK8963_ADDRESS | READ_FLAG); //Set the I2C slave addres of AK8963 and set for read.
     writeByte(I2C_SLV0_REG, AK8963_XOUT_L); //I2C slave 0 register address from where to begin data transfer
     writeByte(I2C_SLV0_CTRL, 0x87); //Read 6 bytes from the magnetometer
+}
+
+void readMagData(int16_t * destination)
+{
+    /*writeByte(I2C_SLV0_ADDR, AK8963_ADDRESS | READ_FLAG); //Set the I2C slave addres of AK8963 and set for read.
+    writeByte(I2C_SLV0_REG, AK8963_XOUT_L); //I2C slave 0 register address from where to begin data transfer
+    writeByte(I2C_SLV0_CTRL, 0x87); //Read 6 bytes from the magnetometer
  
-    wait(0.01);
+    wait(0.01);*/
     uint8_t response[7];
     readBytes(EXT_SENS_DATA_00, 7, response);
     //must start your read from AK8963A register 0x03 and read seven bytes so that upon read of ST2 register 0x09 the AK8963A will unlatch the data registers for the next measurement.
@@ -426,6 +433,8 @@ void readMagData(int16_t * destination)
         //float data = (float) bit_data;
         //Magnetometer[i] = data / Magnetometer_divider;
     }
+    
+    writeByte(I2C_SLV0_CTRL, 0x87); //Read 6 bytes from the magnetometer
 }
 
 void readBytesASAX(uint8_t * destination)

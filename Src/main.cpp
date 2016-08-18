@@ -242,22 +242,6 @@ void initAK()
     } 
 }
 
-uint8_t AK8963_whoami()
-{
-    uint8_t response;
-    mpu9250.writeByte(I2C_SLV0_ADDR,AK8963_ADDRESS|READ_FLAG); //Set the I2C slave addres of AK8963 and set for read.
-    mpu9250.writeByte(I2C_SLV0_REG, WHO_AM_I_AK8963); //I2C slave 0 register address from where to begin data transfer
-    mpu9250.writeByte(I2C_SLV0_CTRL, 0x81); //Read 1 byte from the magnetometer
-
-    //WriteReg(MPUREG_I2C_SLV0_CTRL, 0x81);    //Enable I2C and set bytes
-    wait(0.01);
-    response = mpu9250.readByte(EXT_SENS_DATA_00);    //Read I2C 
-    //ReadRegs(MPUREG_EXT_SENS_DATA_00,response,1);
-    //response=WriteReg(MPUREG_I2C_SLV0_DO, 0x00);    //Read I2C 
-
-    return response;
-}
-
 void cross(float *s, const float *u, const float *v)
 {
     s[0] = u[1] * v[2] - u[2] * v[1];
@@ -280,6 +264,8 @@ void mulqv(float *q, float *v)
 
 float dvbias[3] = {0, 0, 1.0};
 
+//bool pt = false;
+float corr_dt = 0;
 
 void integrate(bool stop)
 {
@@ -293,29 +279,52 @@ void integrate(bool stop)
     
     if(stop)
     {
-        dvbias[0] += (dv[0] - dvbias[0]) * 0.05;
-        dvbias[1] += (dv[1] - dvbias[1]) * 0.05;
-        dvbias[2] += (dv[2] - dvbias[2]) * 0.05;
+        /*if(corr_dt)
+        {
+            corr_dt *= 0.5f;
+            px -= vx * corr_dt;
+            py -= vy * corr_dt;
+            pz -= vz * corr_dt;
+            //uprintf("*P%f,%f,%f*\n", px, py, pz);
+            uprintf("*TX%fY%f*\n", px, py);
+
+            corr_dt = 0.0f;
+        }*/
+        dvbias[0] += (dv[0] - dvbias[0]) * 0.02;
+        dvbias[1] += (dv[1] - dvbias[1]) * 0.02;
+        dvbias[2] += (dv[2] - dvbias[2]) * 0.02;
         vx = 0.0f;
         vy = 0.0f;
         vz = 0.0f;
+        //pt = true;
         return;
     }
+    else corr_dt += dt;
+    /*else if(pt)
+    {
+        uprintf("+dv(%f,%f,%f)\n", dvbias[0], dvbias[1], dvbias[2]);
+        pt = false;
+    }*/
     dv[0] -= dvbias[0];
     dv[1] -= dvbias[1];
     dv[2] -= dvbias[2];
     //uprintf("*D%f,%f,%f*\n", dv[0], dv[1], dv[2]);
     
-    float nvx = vx + dv[0] * dt;
-    float nvy = vy + dv[1] * dt;
-    float nvz = vz + dv[2] * dt;
+    float nvx = vx + dv[0] * dt * 9.8f;
+    float nvy = vy + dv[1] * dt * 9.8f;
+    float nvz = vz + dv[2] * dt * 9.8f;
     //uprintf("*V%f,%f,%f*\n", nvx, nvy, nvz);
     px += (vx + nvx) * (dt * 0.5f);
     py += (vy + nvy) * (dt * 0.5f);
     pz += (vz + nvz) * (dt * 0.5f);
-    vx = nvx * 0.95;
-    vy = nvy * 0.95;
-    vz = nvz * 0.95;
+    vx = nvx;// * 0.9;
+    vy = nvy;// * 0.9;
+    vz = nvz;// * 0.9;
+}
+
+int abs(int i)
+{
+  return (i < 0) ? -i : i;
 }
 
 int main(void)
@@ -430,24 +439,31 @@ int main(void)
     magbias[1] = 0.0f;//+120.;  // User environmental x-axis correction in milliGauss
     magbias[2] = 0.0f;//+125.;  // User environmental x-axis correction in milliGauss
     
+    mpu9250.initReadMagData();
     //int asum[3] = {0, 0, 0};
     //int ctr = 0;
     while(1) 
     {
         // If intPin goes high, all data registers have new data
-        if(mpu9250.readByte(INT_STATUS) & 0x01) 
+        if(mpu9250.readByte(INT_STATUS) & 0x01) //RAW_DATA_RDY_INT
         {  // On interrupt, check if data ready interrupt
             if(stop < 1000) 
                 stop++;
             
             mpu9250.readAccelData(accelCount);  // Read the x/y/z adc values   
             //uprintf("*A%d,%d,%d*\n", accelCount[0], accelCount[1], accelCount[2]);
-            ax += (((float) (accelCount[0] - 180)) / 16400.0f - ax) * 0.1;
-            ay += (((float) (accelCount[1] - 95)) / 16395.0f - ay) * 0.1;
-            az += (((float) (accelCount[2] + 605)) / 16535.0f - az) * 0.1;
+            accelCount[0] -= 180;
+            accelCount[1] -= 95;
+            accelCount[2] += 605;
+            if(abs(accelCount[0]) < 20000 && abs(accelCount[1]) < 20000 && abs(accelCount[2]) < 20000)
+            {
+                ax += (((float) accelCount[0]) / 16400.0f - ax) * 0.01;
+                ay += (((float) accelCount[1]) / 16395.0f - ay) * 0.01;
+                az += (((float) accelCount[2]) / 16535.0f - az) * 0.01;
+            }
             //uprintf("*A%f,%f,%f*\n", ax, ay, az);
-#define GTOL 5.0f
-#define ATOL 0.3f
+#define GTOL 10.0f//5.0f
+#define ATOL 1.0f//f0.3f
             if(fabs(oax - ax) > ATOL || fabs(oay - ay) > ATOL || fabs(oaz - az) > ATOL)
                 stop = 0;
             
@@ -467,45 +483,31 @@ int main(void)
             if(magCount[0] != -1 || magCount[1] != -1 || magCount[2] != -1)
             {
                 //uprintf("+m(%d, %d, %d)\n", magCount[0], magCount[1], magCount[2]);
-                //uprintf("*M%d,%d,%d*\n", magCount[0], magCount[1], magCount[2]);
-                mx = (float)magCount[0] * mRes * magCalibration[0] - magbias[0];  // get actual magnetometer value, this depends on scale being set
-                my = (float)magCount[1] * mRes * magCalibration[1] - magbias[1];  
-                mz = (float)magCount[2] * mRes * magCalibration[2] - magbias[2];
+                mx = (float)(magCount[0] - 237) * mRes * magCalibration[0];// - magbias[0];  // get actual magnetometer value, this depends on scale being set
+                my = (float)(magCount[1] - 27) * mRes * magCalibration[1];// - magbias[1];  
+                mz = (float)(magCount[2] + 350) * mRes * magCalibration[2];// - magbias[2];
             }
-            integrate(stop > 50);
+            integrate(stop > 5);
             
             oax = ax;
             oay = ay;
             oaz = az;
+            sumCount++;
         }
    
         uint32_t Now = HAL_GetTick();
-        deltat = (float)((Now - lastUpdate)/1000.0f) ; // set integration time by time elapsed since last filter update
+        deltat = (float)((Now - lastUpdate) * 0.001f) ; // set integration time by time elapsed since last filter update
         lastUpdate = Now;
         
         sum += deltat;
-        sumCount++;
     
-        mpu9250.MahonyQuaternionUpdate(ax, ay, az, gx*PI/180.0f, gy*PI/180.0f, gz*PI/180.0f, my, mx, mz);
+        //mpu9250.MahonyQuaternionUpdate(ax, ay, az, gx*PI/180.0f, gy*PI/180.0f, gz*PI/180.0f, my, mx, mz);
+        mpu9250.MadgwickQuaternionUpdate(ax, ay, az, gx*PI/180.0f, gy*PI/180.0f, gz*PI/180.0f, my, mx, mz);
 
         // Serial print and/or display at 0.5 s rate independent of data rates
         delt_t = HAL_GetTick() - count;
         if (delt_t > 100) 
         { // update LCD once per half-second independent of read rate
-            //uprintf("acc = (%f, %f, %f)g", ax, ay, az);
-            /*uprintf("ax = %f", 1000*ax); 
-            uprintf(" ay = %f", 1000*ay); 
-            uprintf(" az = %f  mg\n\r", 1000*az); */
-
-            //uprintf("gyr = (%f, %f, %f)d/s\n", gx, gy, gz);
-            /*uprintf("gx = %f", gx); 
-            uprintf(" gy = %f", gy); 
-            uprintf(" gz = %f  deg/s\n\r", gz); */
-            
-            //uprintf("mag = (%f, %f, %f)mG\n", mx, my, mz);
-            /*uprintf("gx = %f", mx); 
-            uprintf(" gy = %f", my); 
-            uprintf(" gz = %f  mG\n\r", mz); */
             
             //tempCount = mpu9250.readTempData();  // Read the adc values
             //temperature = ((float) tempCount) / 333.87f + 21.0f; // Temperature in degrees Centigrade
@@ -513,6 +515,9 @@ int main(void)
             
             uprintf("*Q%f,%f,%f,%f*\n", q[0], q[1], q[2], q[3]);
             uprintf("*P%f,%f,%f*\n", px, py, pz);
+            uprintf("*TX%fY%f*\n", px, py);
+
+            //uprintf("*M%d,%d,%d*\n", magCount[0], magCount[1], magCount[2]);
             
     
             // Define output variables from updated quaternion---these are Tait-Bryan angles, commonly used in aircraft orientation.
