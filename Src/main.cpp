@@ -327,6 +327,16 @@ int abs(int i)
   return (i < 0) ? -i : i;
 }
 
+struct Dump
+{
+    uint32_t t;
+    int16_t a[3], w[3], m[3];
+};
+
+Dump dump[5000];
+int di = 0;
+
+
 int main(void)
 {
 
@@ -452,15 +462,19 @@ int main(void)
             
             mpu9250.readAccelData(accelCount);  // Read the x/y/z adc values   
             //uprintf("*A%d,%d,%d*\n", accelCount[0], accelCount[1], accelCount[2]);
-            accelCount[0] -= 180;
+            dump[di].a[0] = accelCount[0];
+            dump[di].a[1] = accelCount[1];
+            dump[di].a[2] = accelCount[2];
+            
+            /*accelCount[0] -= 180;
             accelCount[1] -= 95;
-            accelCount[2] += 605;
-            if(abs(accelCount[0]) < 20000 && abs(accelCount[1]) < 20000 && abs(accelCount[2]) < 20000)
-            {
-                ax += (((float) accelCount[0]) / 16400.0f - ax) * 0.01;
-                ay += (((float) accelCount[1]) / 16395.0f - ay) * 0.01;
-                az += (((float) accelCount[2]) / 16535.0f - az) * 0.01;
-            }
+            accelCount[2] += 605;*/
+            //if(abs(accelCount[0]) < 20000 && abs(accelCount[1]) < 20000 && abs(accelCount[2]) < 20000)
+            //{
+                ax += (((float) accelCount[0] - 180) / 16400.0f - ax) * 0.01;
+                ay += (((float) accelCount[1] - 95) / 16395.0f - ay) * 0.01;
+                az += (((float) accelCount[2] + 605) / 16535.0f - az) * 0.01;
+            //}
             //uprintf("*A%f,%f,%f*\n", ax, ay, az);
 #define GTOL 10.0f//5.0f
 #define ATOL 1.0f//f0.3f
@@ -468,6 +482,11 @@ int main(void)
                 stop = 0;
             
             mpu9250.readGyroData(gyroCount);  // Read the x/y/z adc values
+            
+            dump[di].w[0] = gyroCount[0];
+            dump[di].w[1] = gyroCount[1];
+            dump[di].w[2] = gyroCount[2];
+            
             //uprintf("gyr = (%d, %d, %d)", gyroCount[0], gyroCount[1], gyroCount[2]);
             // Calculate the gyro value into actual degrees per second
             gx = (float)gyroCount[0]*gRes - gyroBias[0];  // get actual gyro value, this depends on scale being set
@@ -478,6 +497,20 @@ int main(void)
             //uprintf("*G%f,%f,%f*\n", gx, gy, gz);
             
             mpu9250.readMagData(magCount);  // Read the x/y/z adc values   
+
+            dump[di].m[0] = magCount[0];
+            dump[di].m[1] = magCount[1];
+            dump[di].m[2] = magCount[2];
+            
+            dump[di].t = HAL_GetTick();
+            
+            di++;
+            if(di >= sizeof(dump) / sizeof(dump[0]))
+            {
+              uprintf("ready");
+              di = 0;
+            }
+            
             // Calculate the magnetometer values in milliGauss
             // Include factory calibration per data sheet and user environmental corrections
             if(magCount[0] != -1 || magCount[1] != -1 || magCount[2] != -1)
