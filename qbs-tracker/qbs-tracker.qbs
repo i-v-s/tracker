@@ -1,6 +1,8 @@
 import qbs
 
 CppApplication {
+
+    //Depends { name: "eigen" }
     consoleApplication: true
     cpp.defines: [
         "TOOLCHAIN_GCC_CW=1",
@@ -21,11 +23,14 @@ CppApplication {
         "../Inc",
         "../Drivers/CMSIS/Include",
         "../Drivers/STM32F4xx_HAL_Driver/Inc",
-        "../Drivers/CMSIS/Device/ST/STM32F4xx/Include"
+        "../Drivers/CMSIS/Device/ST/STM32F4xx/Include",
+        "c:/src/eigen",
+        "c:/src/flyflow"
     ]
 
     files: [
         "../Src/main.cpp",
+        "../Src/tracker.cpp", //"../Inc/tracker.h",
         "../Src/*.c",
         "../Drivers/CMSIS/Device/ST/STM32F4xx/Source/Templates/system_stm32f4xx.c",
         "../Drivers/CMSIS/Device/ST/STM32F4xx/Source/Templates/gcc/startup_stm32f407xx.s",
@@ -46,7 +51,8 @@ CppApplication {
         "../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_spi.c",
         "../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_tim.c",
         "../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_tim_ex.c",
-        "../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_uart.c"
+        "../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_uart.c",
+        "eigen.qbs",
     ]
     cpp.linkerFlags:[
         "-flto","-mthumb","-mcpu=cortex-m4","-mfloat-abi=hard","-mfpu=fpv4-sp-d16","--specs=nano.specs","-Wl,--start-group",
