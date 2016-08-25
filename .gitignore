@@ -79,3 +79,4 @@ $RECYCLE.BIN/
 *.lnk
 EWARM/iar/Obj
 EWARM/settings
+*.user
