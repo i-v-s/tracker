@@ -342,6 +342,16 @@ void wait(float t)
     HAL_Delay(t * 0.001);
 }
 
+uint8_t uartRcvBuf;
+
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *)
+{
+    switch(uartRcvBuf)
+    {
+    case 'r': resetPos(); break;
+    }
+    HAL_UART_Receive_IT(&huart2, &uartRcvBuf, 1);
+}
 
 int main(void)
 {
@@ -383,6 +393,7 @@ int main(void)
   //HAL_I2C_Master_Transmit(&hi2c1, MPU9250_ADDRESS, &data, sizeof(data), 1000);
   //HAL_I2C_Master_Receive(&hi2c1, MPU9250_ADDRESS, &res, sizeof(res), 1000);
     wait(0.1);
+    HAL_UART_Receive_IT(&huart2, &uartRcvBuf, 1);
     uint8_t whoami = mpu9250.readByte(WHO_AM_I_MPU9250);  // Read WHO_AM_I register for MPU-9250
     
     /*uint8_t p1 = mpu9250.readByte(PWR_MGMT_1);

@@ -3,9 +3,6 @@
 #include "stm32f4xx_hal.h"
 #include "tracker.h"
 #include <string>
-//#include <stdlib.h>
-//#include <stdio.h>
-//#include <sstream>
 
 typedef float Time;
 typedef float Scalar;
@@ -36,18 +33,20 @@ Vector3 pos;
 int outOn = 0;
 //#define
 
-void init()
+int16_t oldAcc[3], oldGyr[3];//, oldMag[3];
+int hist = 0;
+bool stopState = false;
+Seq::iterator it = nullptr;
+
+
+void resetPos()
 {
     pos.setZero();
-
+    it = nullptr;
 }
 
 void processData(uint32_t time32, const int16_t *acc, const int16_t *gyr, const int16_t *mag)
 {
-    static int16_t oldAcc[3], oldGyr[3];//, oldMag[3];
-    static int hist = 0;
-    static bool stopState = false;
-
     if(abs(acc[0] - oldAcc[0]) < ATOL && abs(acc[1] - oldAcc[1]) < ATOL && abs(acc[2] - oldAcc[2]) < ATOL
             && abs(gyr[0] - oldGyr[0]) < GTOL && abs(gyr[1] - oldGyr[1]) < GTOL && abs(gyr[2] - oldGyr[2]) < GTOL)
     {
@@ -100,7 +99,6 @@ void processData(uint32_t time32, const int16_t *acc, const int16_t *gyr, const 
     static int stopCounter = 0;
     static Vector3 aSum, wSum;
 
-    static Seq::iterator it = nullptr;
     static Time beginTime;
     if(stopState) // Режим калибровки
     {
@@ -241,5 +239,3 @@ void uprintxy(char c, const Vector3 &pos)
     *b = 0;
     uprintf(buf);
 }
-
-//uprint("*TX%fY%f*\n", px, py);
