@@ -229,11 +229,7 @@ int lastUpdate = 0, firstUpdate = 0, Now = 0;    // used to calculate integratio
 float q[4] = {1.0f, 0.0f, 0.0f, 0.0f};           // vector to hold quaternion
 float eInt[3] = {0.0f, 0.0f, 0.0f};              // vector to hold integral error for Mahony method
 
-void wait(float t)
-{
-  for(unsigned int x = (unsigned int)(100000000 * t); x; --x);
-}
-
+void wait(float t);
 
 class MPU9250 {
  

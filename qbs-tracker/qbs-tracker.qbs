@@ -13,12 +13,13 @@ CppApplication {
     cpp.debugInformation: true
     cpp.commonCompilerFlags: [
         "-mthumb","-mcpu=cortex-m4","-mfloat-abi=hard","-mfpu=fpv4-sp-d16",
+        "-u", "_printf_float",
         //"-flto",
         "-fdata-sections",
         "-ffunction-sections",
         "-fno-inline"
     ]
-    cpp.cxxLanguageVersion: "c++14"
+    cpp.cxxLanguageVersion: "c++11"
     cpp.includePaths: [
         "../Inc",
         "../Drivers/CMSIS/Include",

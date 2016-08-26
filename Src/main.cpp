@@ -32,6 +32,7 @@
   */
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f4xx_hal.h"
+#include "tracker.h"
 #include <string.h>
 #include <stdarg.h>
 
@@ -275,7 +276,7 @@ void integrate(bool stop)
     
     float dv[3] = {(ax + oax) * 0.5f, (ay + oay) * 0.5f, (az + oaz) * 0.5f};
     mulqv(q, dv);
-    //Vector3 dv = (state.q.toRotationMatrix() * aNew + prev.first->state.q.toRotationMatrix() * aOld) / 2; // ускорение dv = (new.q * ea + old.q * eaold) / 2
+    //Vector3 dv = (state.q.toRotationMatrix() * aNew + prev.first->state.q.toRotationMatrix() * aOld) / 2; // СѓСЃРєРѕСЂРµРЅРёРµ dv = (new.q * ea + old.q * eaold) / 2
     
     if(stop)
     {
@@ -327,14 +328,19 @@ int abs(int i)
   return (i < 0) ? -i : i;
 }
 
-struct Dump
+/*struct Dump
 {
     uint32_t t;
     int16_t a[3], w[3], m[3];
 };
 
 Dump dump[5000];
-int di = 0;
+int di = 0;*/
+
+void wait(float t)
+{
+    HAL_Delay(t * 0.001);
+}
 
 
 int main(void)
@@ -457,14 +463,15 @@ int main(void)
         // If intPin goes high, all data registers have new data
         if(mpu9250.readByte(INT_STATUS) & 0x01) //RAW_DATA_RDY_INT
         {  // On interrupt, check if data ready interrupt
+            uint32_t time = HAL_GetTick();
             if(stop < 1000) 
                 stop++;
             
             mpu9250.readAccelData(accelCount);  // Read the x/y/z adc values   
             //uprintf("*A%d,%d,%d*\n", accelCount[0], accelCount[1], accelCount[2]);
-            dump[di].a[0] = accelCount[0];
+            /*dump[di].a[0] = accelCount[0];
             dump[di].a[1] = accelCount[1];
-            dump[di].a[2] = accelCount[2];
+            dump[di].a[2] = accelCount[2];*/
             
             /*accelCount[0] -= 180;
             accelCount[1] -= 95;
@@ -483,9 +490,9 @@ int main(void)
             
             mpu9250.readGyroData(gyroCount);  // Read the x/y/z adc values
             
-            dump[di].w[0] = gyroCount[0];
+            /*dump[di].w[0] = gyroCount[0];
             dump[di].w[1] = gyroCount[1];
-            dump[di].w[2] = gyroCount[2];
+            dump[di].w[2] = gyroCount[2];*/
             
             //uprintf("gyr = (%d, %d, %d)", gyroCount[0], gyroCount[1], gyroCount[2]);
             // Calculate the gyro value into actual degrees per second
@@ -498,7 +505,8 @@ int main(void)
             
             mpu9250.readMagData(magCount);  // Read the x/y/z adc values   
 
-            dump[di].m[0] = magCount[0];
+            processData(time, accelCount, gyroCount, magCount);
+            /*dump[di].m[0] = magCount[0];
             dump[di].m[1] = magCount[1];
             dump[di].m[2] = magCount[2];
             
@@ -509,7 +517,7 @@ int main(void)
             {
               uprintf("ready");
               di = 0;
-            }
+            }*/
             
             // Calculate the magnetometer values in milliGauss
             // Include factory calibration per data sheet and user environmental corrections
@@ -546,9 +554,9 @@ int main(void)
             //temperature = ((float) tempCount) / 333.87f + 21.0f; // Temperature in degrees Centigrade
             //uprintf(" temperature = %f  C\n\r", temperature); 
             
-            uprintf("*Q%f,%f,%f,%f*\n", q[0], q[1], q[2], q[3]);
-            uprintf("*P%f,%f,%f*\n", px, py, pz);
-            uprintf("*TX%fY%f*\n", px, py);
+            //uprintf("*Q%f,%f,%f,%f*\n", q[0], q[1], q[2], q[3]);
+            //uprintf("*P%f,%f,%f*\n", px, py, pz);
+            //uprintf("*TX%fY%f*\n", px, py);
 
             //uprintf("*M%d,%d,%d*\n", magCount[0], magCount[1], magCount[2]);
             
