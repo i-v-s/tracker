@@ -340,7 +340,10 @@ int di = 0;*/
 
 void wait(float t)
 {
-    HAL_Delay(t * 0.001);
+    if(uint32_t delay = t * 0.001)
+        HAL_Delay(delay);
+    else
+        for(uint32_t x = t * 100000000; x; x--);
 }
 
 uint8_t uartRcvBuf;
