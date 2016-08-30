@@ -33,6 +33,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f4xx_hal.h"
 #include "tracker.h"
+#include "calimag.h"
 #include <string.h>
 #include <stdarg.h>
 
@@ -344,11 +345,23 @@ void wait(float t)
 
 uint8_t uartRcvBuf;
 
+bool calibration = false;
+
+float mOffset[3], mScale[3];
+
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *)
 {
     switch(uartRcvBuf)
     {
-    case 'r': resetPos(); break;
+    case 'r':
+        if(calibration)
+            endCalibrate(mOffset, mScale);
+        calibration = false;
+        resetPos();
+        break;
+    case 'c': calibration = true;
+        startCalibrate();
+        break;
     }
     HAL_UART_Receive_IT(&huart2, &uartRcvBuf, 1);
 }
@@ -516,7 +529,10 @@ int main(void)
             
             mpu9250.readMagData(magCount);  // Read the x/y/z adc values   
 
-            processData(time, accelCount, gyroCount, magCount);
+            if(calibration)
+                calibrate(magCount);
+            else
+                processData(time, accelCount, gyroCount, magCount);
             /*dump[di].m[0] = magCount[0];
             dump[di].m[1] = magCount[1];
             dump[di].m[2] = magCount[2];

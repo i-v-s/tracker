@@ -32,6 +32,7 @@ CppApplication {
     files: [
         "../Src/main.cpp",
         "../Src/tracker.cpp", //"../Inc/tracker.h",
+        "../Src/calimag.cpp",
         "../Src/*.c",
         "../Drivers/CMSIS/Device/ST/STM32F4xx/Source/Templates/system_stm32f4xx.c",
         "../Drivers/CMSIS/Device/ST/STM32F4xx/Source/Templates/gcc/startup_stm32f407xx.s",
