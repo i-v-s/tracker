@@ -96,8 +96,13 @@ void processData(uint32_t time32, const int16_t *acc, const int16_t *gyr, const 
     m.w[1] += ((gyr[1] - 91)  * gRes - m.w[1]) * wf;
     m.w[2] += ((gyr[2] + 146) * gRes - m.w[2]) * wf;
 
+    Vector3 mm;
+    mm << (mag[0] - 244) * 0.0040046935f,
+          (mag[1] - 77) * 0.0036238449f,
+          (mag[2] + 272) * 0.00321566155805f;
+
     static int stopCounter = 0;
-    static Vector3 aSum, wSum;
+    static Vector3 aSum, wSum, mSum;
 
     static Time beginTime;
     if(stopState) // Режим калибровки
@@ -106,6 +111,7 @@ void processData(uint32_t time32, const int16_t *acc, const int16_t *gyr, const 
         {
             aSum += m.a;
             wSum += m.w;
+            mSum += mm;
         }
         else
         {
@@ -119,6 +125,7 @@ void processData(uint32_t time32, const int16_t *acc, const int16_t *gyr, const 
             // Начинаем новую калибровку
             aSum = m.a;
             wSum = m.w;
+            mSum = mm;
             HAL_GPIO_WritePin(GPIOD, LD4_Pin, GPIO_PIN_RESET);
         }
         stopCounter++;
@@ -127,27 +134,33 @@ void processData(uint32_t time32, const int16_t *acc, const int16_t *gyr, const 
     {
         if(stopCounter || !it)
         {
+            // Инициализируем интегрирование
+            beginTime = time;
+            Seq::iterator t = seq.add(time, m);
+
+            t->from(&seq);
+            if(it && !std::isnan(it->state.p[0]))
+                t->state.p = it->state.p;
+            else
+                t->state.p.setZero();
+
             if(stopCounter)
             {
                 // Завершаем калибровку
                 aSum /= stopCounter;
                 wSum /= stopCounter;
+                mSum /= stopCounter;
                 stopCounter = 0;
                 seq.setWBias(wSum);
                 seq.setGravity(aSum.norm());
+                //uprint('M', mSum);
+                t->fromGravityAndMag(aSum, mSum);
             }
 
-            // Инициализируем интегрирование
-            beginTime = time;
-            Seq::iterator t = seq.add(time, m);
-            t->from(&seq);
-            Vector3 v0;
+            /*Vector3 v0;
             v0 << 0, 0, 1;
-            if(it && !std::isnan(it->state.p[0]))
-                t->state.p = it->state.p;
-            else
-                t->state.p.setZero();
-            t->state.q.setFromTwoVectors(aSum, v0);
+            t->state.q.setFromTwoVectors(aSum, v0);*/
+
             it = t;
 
             HAL_GPIO_WritePin(GPIOD, LD4_Pin, GPIO_PIN_SET);
@@ -160,12 +173,12 @@ void processData(uint32_t time32, const int16_t *acc, const int16_t *gyr, const 
         }
         outOn = (int) (500 / OUTT);
     }
-    if(it && /*outOn &&*/ time32 >= outTime)
+    if(it && outOn && time32 >= outTime)
     {
         if(std::isnan(it->state.p[0])) return;
         pos += (it->state.p - pos) * POSFLT;
         uprint('P', pos * 100);
-        uprintxy('T', pos * 100);
+        //uprintxy('T', pos * 100);
         outTime = time32 + OUTT;
         outOn--;
     }
@@ -219,6 +232,24 @@ void uprint(char c, const Vector3 &pos)
     b = ftoa(b, pos[1]);
     *(b++) = ',';
     b = ftoa(b, pos[2]);
+    *(b++) = '*';
+    *(b++) = '\n';
+    *b = 0;
+    uprintf(buf);
+}
+
+void uprint(char c, const Eigen::Quaternionf &q)
+{
+    char buf[80], *b = buf;
+    *(b++) = '*';
+    *(b++) = c;
+    b = ftoa(b, q.w());
+    *(b++) = ',';
+    b = ftoa(b, q.x());
+    *(b++) = ',';
+    b = ftoa(b, q.y());
+    *(b++) = ',';
+    b = ftoa(b, q.z());
     *(b++) = '*';
     *(b++) = '\n';
     *b = 0;

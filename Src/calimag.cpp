@@ -8,13 +8,15 @@ bool active = false;
 
 void uprintf( const char* format, ... );
 
-EllipsoidCalibrator<float> ec;
+EllipsoidCalibrator<double> ec;
 
 
 void startCalibrate()
 {
     ec.reset();
 }
+
+int16_t magMin[3] = {}, magMax[3] = {};
 
 void calibrate(const int16_t *mag)
 {
@@ -25,6 +27,11 @@ void calibrate(const int16_t *mag)
         //q0 = quat;
     }
     ec.addValue(mag);
+    for(int x = 0; x < 3; x++)
+    {
+        if(magMin[x] > mag[x]) magMin[x] = mag[x];
+        if(magMax[x] < mag[x]) magMax[x] = mag[x];
+    }
 }
 
 void endCalibrate(float *m0, float *m1)
