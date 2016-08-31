@@ -24,6 +24,7 @@ const float gRes = 250.0 / 32768.0 * M_PI / 180;
 
 char *ftoa(char *fstr, float num);
 void uprint(char c, const Vector3 &pos);
+void uprint(char c, const Eigen::Quaternionf &q);
 void uprintxy(char c, const Vector3 &pos);
 
 uint32_t outTime = 0;
@@ -155,11 +156,16 @@ void processData(uint32_t time32, const int16_t *acc, const int16_t *gyr, const 
                 seq.setGravity(aSum.norm());
                 //uprint('M', mSum);
                 t->fromGravityAndMag(aSum, mSum);
+
+                /*Eigen::Quaternionf q;
+                Vector3 v0;
+                v0 << 0, 0, 1;
+                q.setFromTwoVectors(aSum, v0);
+                Eigen::Matrix3f mn = t->state.q.toRotationMatrix();
+                Eigen::Matrix3f mo = q.toRotationMatrix();
+                mo.setZero();*/
             }
 
-            /*Vector3 v0;
-            v0 << 0, 0, 1;
-            t->state.q.setFromTwoVectors(aSum, v0);*/
 
             it = t;
 
@@ -178,6 +184,7 @@ void processData(uint32_t time32, const int16_t *acc, const int16_t *gyr, const 
         if(std::isnan(it->state.p[0])) return;
         pos += (it->state.p - pos) * POSFLT;
         uprint('P', pos * 100);
+        uprint('Q', it->state.q);
         //uprintxy('T', pos * 100);
         outTime = time32 + OUTT;
         outOn--;
