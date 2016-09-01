@@ -441,7 +441,7 @@ int main(void)
         uprintf("x accel bias = %f\n\r", accelBias[0]);
         uprintf("y accel bias = %f\n\r", accelBias[1]);
         uprintf("z accel bias = %f\n\r", accelBias[2]);*/
-        wait(2);
+        wait(0.2);
 
         initAK();
         //wait(0.2);

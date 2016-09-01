@@ -28,7 +28,7 @@ void uprint(char c, const Eigen::Quaternionf &q);
 void uprintxy(char c, const Vector3 &pos);
 
 uint32_t outTime = 0;
-Vector3 pos;
+Vector3 pos, oldPos;
 #define POSFLT 0.1
 #define OUTT 50
 int outOn = 0;
@@ -42,6 +42,7 @@ Seq::iterator it = nullptr;
 
 void resetPos()
 {
+    oldPos.setZero();
     pos.setZero();
     it = nullptr;
 }
@@ -98,9 +99,10 @@ void processData(uint32_t time32, const int16_t *acc, const int16_t *gyr, const 
     m.w[2] += ((gyr[2] + 146) * gRes - m.w[2]) * wf;
 
     Vector3 mm;
-    mm << (mag[0] - 244) * 0.0040046935f,
-          (mag[1] - 77) * 0.0036238449f,
-          (mag[2] + 272) * 0.00321566155805f;
+    /*mm << mag[0], mag[1], mag[2];*/
+    mm << (mag[1] - 31) * 0.0022f,
+          (mag[0] - 244) * 0.0024f,
+          (mag[2] + 357) * 0.0022f;
 
     static int stopCounter = 0;
     static Vector3 aSum, wSum, mSum;
@@ -120,6 +122,7 @@ void processData(uint32_t time32, const int16_t *acc, const int16_t *gyr, const 
             if(it)
             {
                 it->state.p -= it->state.v * (time - beginTime) * 0.5;
+                it->state.v.setZero();
                 //uprint('C', it->state.p);
             }
 
@@ -154,14 +157,15 @@ void processData(uint32_t time32, const int16_t *acc, const int16_t *gyr, const 
                 stopCounter = 0;
                 seq.setWBias(wSum);
                 seq.setGravity(aSum.norm());
-                //uprint('M', mSum);
+                //uprint('P', 20*mSum);
                 t->fromGravityAndMag(aSum, mSum);
+                uprintxy('M', mSum);
 
                 /*Eigen::Quaternionf q;
                 Vector3 v0;
                 v0 << 0, 0, 1;
-                q.setFromTwoVectors(aSum, v0);
-                Eigen::Matrix3f mn = t->state.q.toRotationMatrix();
+                t->state.q.setFromTwoVectors(aSum, v0);*/
+                /*Eigen::Matrix3f mn = t->state.q.toRotationMatrix();
                 Eigen::Matrix3f mo = q.toRotationMatrix();
                 mo.setZero();*/
             }
@@ -179,11 +183,16 @@ void processData(uint32_t time32, const int16_t *acc, const int16_t *gyr, const 
         }
         outOn = (int) (500 / OUTT);
     }
-    if(it && outOn && time32 >= outTime)
+    if(it && /*outOn &&*/ time32 >= outTime)
     {
         if(std::isnan(it->state.p[0])) return;
-        pos += (it->state.p - pos) * POSFLT;
+
+        Vector3 p1 = it->state.p - it->state.v * (time - beginTime) * 0.5;
+
+        pos += (p1 - pos) * POSFLT;
         uprint('P', pos * 100);
+        uprint('D', (pos - oldPos) * 100);
+        oldPos = pos;
         uprint('Q', it->state.q);
         //uprintxy('T', pos * 100);
         outTime = time32 + OUTT;
